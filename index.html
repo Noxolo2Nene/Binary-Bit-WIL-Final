@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Binary Bit Portal - Secure Access</title>
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<style>
+body{font-family:Arial;background:#0a192f;color:white;padding:20px}
+.box{background:#112240;padding:20px;border-radius:10px;margin:10px 0;border:1px solid #64ffda}
+input,button{padding:10px;margin:5px;border-radius:5px;border:none}
+button{background:#64ffda;cursor:pointer;font-weight:bold}
+#chatBox{height:200px;overflow-y:scroll;background:#020c1b;padding:10px}
+.status{color:#64ffda}
+</style>
+</head>
+<body>
+<h1>Binary Bit Portal | Central AWS 192.168.20.10</h1>
+<p class="status">VPN Tunnel: 10.8.0.10-14 | OpenVPN Port 1194 ACTIVE | Status: GREEN ONLINE</p>
+
+<div class="box">
+<h3>1. Secure Login (JWT)</h3>
+<input id="user" placeholder="username" value="admin">
+<input id="pass" type="password" placeholder="password" value="224653549">
+<button onclick="login()">Login</button>
+<p id="loginResult"></p>
+</div>
+
+<div class="box">
+<h3>2. Live Secure Chat (Replaces WhatsApp)</h3>
+<div id="chatBox"></div>
+<input id="msg" placeholder="Type message...">
+<button onclick="sendChat()">Send</button>
+</div>
+
+<div class="box">
+<h3>3. Secure File Transfer (Replaces Dropbox)</h3>
+<input type="file" id="fileInput">
+<button onclick="uploadFile()">Upload Securely</button>
+<p id="uploadResult"></p>
+</div>
+
+<div class="box">
+<h3>4. Site Monitoring (Maps to 192.168.20.10)</h3>
+<button onclick="sendMonitor()">Send Site Status: JHB ONLINE</button>
+<p id="monitorResult"></p>
+</div>
+
+<script>
+const SERVER = "http://localhost:3001";
+const socket = io(SERVER);
+
+socket.on('connect', ()=>{ addChat("System: Connected to Primary Server 192.168.20.10"); });
+
+socket.on('chatMessage', (data)=>{ addChat(data.username + ": " + data.message); });
+socket.on('fileAlert', (data)=>{ addChat("FILE ALERT: " + data.file + " received securely"); });
+socket.on('siteStatus', (data)=>{ addChat("SITE UPDATE: " + JSON.stringify(data)); });
+
+function addChat(t){ document.getElementById('chatBox').innerHTML += "<div>"+t+"</div>"; }
+
+async function login(){
+  const res = await fetch(SERVER+'/api/login',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({username:document.getElementById('user').value, password:document.getElementById('pass').value})
+  });
+  const data = await res.json();
+  document.getElementById('loginResult').innerText = "TOKEN: " + data.token.substring(0,30)+"... | VPN IP: "+data.vpn_ip+" | "+data.message;
+}
+
+function sendChat(){
+  const message = document.getElementById('msg').value;
+  socket.emit('chatMessage',{username:'admin', message});
+  document.getElementById('msg').value='';
+}
+
+async function uploadFile(){
+  const file = document.getElementById('fileInput').files[0];
+  if(!file) return alert("Select file");
+  const form = new FormData(); form.append('file', file);
+  const res = await fetch(SERVER+'/api/upload',{method:'POST', body:form});
+  const data = await res.json();
+  document.getElementById('uploadResult').innerText = data.message;
+}
+
+async function sendMonitor(){
+  const res = await fetch(SERVER+'/api/monitor',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({site:"Johannesburg Branch", ip:"192.168.30.5", status:"ONLINE", timestamp:new Date()})
+  });
+  const data = await res.json();
+  document.getElementById('monitorResult').innerText = "Monitor packet sent to 192.168.20.10 | Received: "+data.received;
+}
+</script>
+</body>
+</html>
